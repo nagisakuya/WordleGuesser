@@ -12,10 +12,20 @@ namespace WordleGuesser
 		const string TOKEN_PATH = @"./TOKEN.txt";
 		const string ANSWER_WORD_LIST_PATH = @"./data/AnswerWordList.txt";
 		const string DATA_PATH = @"./data/data.bytes";
-		const int MAX_REQUEST = 10;
-		const string WORDLE_ID = "275";
+		const string CONFIG_PATH = @"./config.txt";
+		static bool SHOW_TWEETS = false;
 		static void Main(string[] args)
 		{
+			string WORDLE_ID = "277";
+			int MAX_REQUEST = 150;
+			{
+				var lines = System.IO.File.ReadAllText(CONFIG_PATH).Split("\r\n");
+				WORDLE_ID = lines[0];
+				MAX_REQUEST = int.Parse(lines[1]);
+			}
+
+			Console.WriteLine($"setting:WORDLE_ID={WORDLE_ID},MAX_REQUEST={MAX_REQUEST}");
+
 			var answerWordList = Word.ImportWords(ANSWER_WORD_LIST_PATH);
 			byte[,] vs = new byte[answerWordList.Count, Hint.COMBINATIONS];
 			//data load
@@ -56,10 +66,10 @@ namespace WordleGuesser
 				Console.WriteLine($"Request:key=\"Wordle {WORDLE_ID}\",until={u},result={temp.Count}");
 				if (temp.Count <= 1) break;
 			}
-			Console.WriteLine($"Result:total {result.Count} tweets found");
+			
 			Console.WriteLine("===========================");
-
 			Dictionary<int, int> possible_words = new();
+			int vailed_tweet_counter = 0;
 			for (int i = 0; i < answerWordList.Count; i++)
 			{
 				possible_words[i] = 0;
@@ -75,7 +85,11 @@ namespace WordleGuesser
 					hints[i] = 0;
 				}
 				bool temp_flag = true;
-				int counter = item.Text[item.Text.IndexOf($"Wordle {WORDLE_ID}") + $"Wordle {WORDLE_ID}".Length + 1] - '0';
+				int temp_char = item.Text[item.Text.IndexOf($"Wordle {WORDLE_ID}") + $"Wordle {WORDLE_ID}".Length + 1];
+				int counter = temp_char switch{
+					'X' => 6,
+					_ => temp_char - '0',
+				};
 				foreach (var line in temp)
 				{
 					if (line.Contains(EnumColorExtention.BLACK_BOX) || line.Contains(EnumColorExtention.WHITE_BOX) || line.Contains(EnumColorExtention.YELLOW_BOX) || line.Contains(EnumColorExtention.GREEN_BOX))
@@ -95,8 +109,9 @@ namespace WordleGuesser
 						formatted_text += line + "\n";
 					}
 				}
-
 				if (!temp_flag || counter<0) continue;
+
+				vailed_tweet_counter++;
 				for (int i = 0; i < answerWordList.Count; i++)
 				{
 					for (int j = 0; ; j++)
@@ -109,10 +124,13 @@ namespace WordleGuesser
 						if (vs[i, j] < hints[j]) break;
 					}
 				}
-				Console.WriteLine($"tweet_id:{item.Id}");
-				Console.WriteLine(item.CreatedAt);
-				Console.WriteLine(formatted_text);
-				Console.WriteLine("===========================");
+				if (SHOW_TWEETS)
+				{
+					Console.WriteLine($"tweet_id:{item.Id}");
+					Console.WriteLine(item.CreatedAt);
+					Console.WriteLine(formatted_text);
+					Console.WriteLine("===========================");
+				}
 			}
 
 			//search
@@ -131,6 +149,7 @@ namespace WordleGuesser
 			}*/
 
 			//output
+			Console.WriteLine($"Result:total {result.Count} tweets found. {vailed_tweet_counter} tweets are valid.\n");
 			var temp_list = possible_words.ToList();
 			temp_list.Sort((pair1, pair2) => pair1.Value.CompareTo(pair2.Value));
 			temp_list.Reverse();
