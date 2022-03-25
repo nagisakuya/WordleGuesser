@@ -14,6 +14,7 @@ namespace WordleGuesser
 		const string DATA_PATH = @"./data/data.bytes";
 		const string CONFIG_PATH = @"./config.txt";
 		static bool SHOW_TWEETS = false;
+		const int MAX_TWEET_PER_REQUEST = 100;
 		static void Main(string[] args)
 		{
 			string WORDLE_ID = "277";
@@ -61,10 +62,10 @@ namespace WordleGuesser
 					: result.Last().CreatedAt;
 				//string u = $"{time.Year}-{time.Month}-{time.Day}_{time.Hour}";
 				string u = time.ToString("yyyy-M-d_H:mm:ss_UTC");
-				var temp = twitter_client.Search.TweetsAsync(count => 100, q => $"\"Wordle {WORDLE_ID}\"", until => u).Result.ToList();
+				var temp = twitter_client.Search.TweetsAsync(count => MAX_TWEET_PER_REQUEST, q => $"\"Wordle {WORDLE_ID}\"", until => u).Result.ToList();
 				result.AddRange(temp);
 				Console.WriteLine($"Request:key=\"Wordle {WORDLE_ID}\",until={u},result={temp.Count}");
-				if (temp.Count <= 1) break;
+				if (temp.Count < MAX_TWEET_PER_REQUEST) break;
 			}
 			
 			Console.WriteLine("===========================");
@@ -84,12 +85,23 @@ namespace WordleGuesser
 				{
 					hints[i] = 0;
 				}
+				int temp_pos = item.Text.IndexOf($"Wordle {WORDLE_ID}") + $"Wordle {WORDLE_ID}".Length + 1;
+				if (!(temp_pos < item.Text.Length)) continue;
 				bool temp_flag = true;
-				int temp_char = item.Text[item.Text.IndexOf($"Wordle {WORDLE_ID}") + $"Wordle {WORDLE_ID}".Length + 1];
-				int counter = temp_char switch{
-					'X' => 6,
-					_ => temp_char - '0',
-				};
+				int temp_char = item.Text[temp_pos];
+				int counter;
+				if(temp_char == 'X')
+				{
+					counter = 6;
+				}
+				else if(temp_char is > '0' and <= '6')
+				{
+					counter = temp_char - '0';
+				}
+				else
+				{
+					continue;
+				}
 				foreach (var line in temp)
 				{
 					if (line.Contains(EnumColorExtention.BLACK_BOX) || line.Contains(EnumColorExtention.WHITE_BOX) || line.Contains(EnumColorExtention.YELLOW_BOX) || line.Contains(EnumColorExtention.GREEN_BOX))
@@ -157,6 +169,9 @@ namespace WordleGuesser
 			{
 				Console.WriteLine(answerWordList[temp_list[i].Key] + " " + temp_list[i].Value);
 			}
+
+			Console.WriteLine("\npress enter to exit...");
+			Console.ReadLine();
 		}
 	}
 }
