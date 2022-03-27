@@ -15,11 +15,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WordleGuesser\WordleGuesser.csproj" />
+    <None Include="..\data\data.bytes" Link="data\data.bytes">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="data\" />
+    <ProjectReference Include="..\WordleGuesser\WordleGuesser.csproj" />
   </ItemGroup>
 
 </Project>
